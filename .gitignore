@@ -1,0 +1,30 @@
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+
+# ===== PyInstaller 构建产物 =====
+build/
+dist/
+*.spec
+
+# ===== 第三方二进制（FLASH/BLAST，可用 prepare_tools.py 重新获取）=====
+tools/
+
+# ===== 日志/临时 =====
+*.log
+setup_log.txt
+selftest.txt
+install_log.txt
+inno_setup.exe
+
+# ===== IDE / 系统 =====
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# ===== 测试残留 =====
+_test*.py

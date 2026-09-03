@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>sgRNA分析报告 - {{ sample_name }}</title>
+<style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+        font-family: "Microsoft YaHei", "WenQuanYi Micro Hei", "SimHei", sans-serif;
+        background: #f0f2f5;
+        color: #333;
+        line-height: 1.7;
+    }
+    .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+    .header {
+        background: linear-gradient(135deg, #2c3e50, #3498db);
+        color: white;
+        padding: 40px;
+        border-radius: 12px;
+        margin-bottom: 30px;
+        text-align: center;
+    }
+    .header h1 { font-size: 2em; margin-bottom: 10px; }
+    .header .meta { opacity: 0.85; font-size: 1.05em; }
+    .section {
+        background: white;
+        border-radius: 10px;
+        padding: 30px;
+        margin-bottom: 24px;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+        scroll-margin-top: 20px;
+    }
+    .section h2 {
+        color: #2c3e50;
+        border-bottom: 3px solid #3498db;
+        padding-bottom: 10px;
+        margin-bottom: 20px;
+        font-size: 1.4em;
+    }
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 16px;
+        margin-bottom: 20px;
+    }
+    .stat-card {
+        background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+        border-radius: 8px;
+        padding: 20px;
+        text-align: center;
+        border-left: 4px solid #3498db;
+    }
+    .stat-card .label { font-size: 0.85em; color: #7f8c8d; margin-bottom: 6px; }
+    .stat-card .value { font-size: 1.6em; font-weight: bold; color: #2c3e50; }
+    .stat-card.good { border-left-color: #27ae60; }
+    .stat-card.warn { border-left-color: #e67e22; }
+    .stat-card.bad { border-left-color: #e74c3c; }
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 16px 0;
+        font-size: 0.95em;
+    }
+    th {
+        background: #3498db;
+        color: white;
+        padding: 12px 10px;
+        text-align: center;
+        font-weight: 600;
+    }
+    td {
+        padding: 8px 10px;
+        text-align: center;
+        border: 1px solid #e0e0e0;
+    }
+    tr:nth-child(even) { background: #f8f9fa; }
+    tr:hover { background: #e8f4fd; }
+    .fig-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 20px;
+        justify-content: center;
+    }
+    .fig-item {
+        flex: 1 1 420px;
+        max-width: 580px;
+        background: #fafbfc;
+        border-radius: 10px;
+        padding: 20px;
+        box-shadow: 0 1px 6px rgba(0,0,0,0.06);
+    }
+    .fig-item.full-width { flex: 1 1 100%; max-width: 100%; }
+    .fig-item img {
+        width: 100%;
+        height: auto;
+        border-radius: 6px;
+        border: 1px solid #e8e8e8;
+    }
+    .fig-caption {
+        text-align: center;
+        font-weight: bold;
+        margin-top: 12px;
+        font-size: 1.05em;
+        color: #2c3e50;
+    }
+    .fig-interp {
+        font-size: 0.92em;
+        color: #555;
+        background: #f0f7ff;
+        padding: 12px 16px;
+        border-left: 4px solid #3498db;
+        margin-top: 10px;
+        border-radius: 0 6px 6px 0;
+        line-height: 1.7;
+    }
+    .fig-assessment { margin-top: 8px; padding: 10px 14px; border-radius: 6px; font-size: 0.9em; font-weight: 600; }
+    .fig-assessment.good { background: #d4edda; color: #155724; border-left: 4px solid #27ae60; }
+    .fig-assessment.ok { background: #fff3cd; color: #856404; border-left: 4px solid #f39c12; }
+    .fig-assessment.warn { background: #fff3cd; color: #856404; border-left: 4px solid #f39c12; }
+    .fig-assessment.warn_strong { background: #ffe0b2; color: #e65100; border-left: 4px solid #f57c00; }
+    .fig-assessment.bad { background: #f8d7da; color: #721c24; border-left: 4px solid #e74c3c; }
+    .conclusion {
+        background: linear-gradient(135deg, #e8f5e9, #f1f8e9);
+        border-radius: 8px;
+        padding: 20px 24px;
+        margin-top: 16px;
+        border-left: 5px solid #27ae60;
+    }
+    .conclusion h3 { color: #27ae60; margin-bottom: 10px; }
+    .conclusion ul { margin-left: 20px; }
+    .conclusion li { margin: 6px 0; }
+    .footer {
+        text-align: center;
+        color: #95a5a6;
+        margin-top: 30px;
+        padding: 20px;
+        font-size: 0.9em;
+    }
+    /* 水印 */
+    .watermark {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 999;
+        opacity: 0.15;
+        font-size: 14px;
+        color: #2c3e50;
+        text-align: right;
+        line-height: 1.5;
+        pointer-events: none;
+        font-weight: bold;
+        font-family: "Microsoft YaHei", sans-serif;
+    }
+    .watermark::before {
+        content: "🧬 sgRNA Analyzer";
+        display: block;
+        font-size: 18px;
+    }
+    .note { font-size: 0.85em; color: #888; margin: 5px 0 0 5px; }
+    .summary-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+    }
+    .summary-row .stat-card { flex: 1 1 150px; }
+    .table-wrapper {
+        max-height: 500px;
+        overflow-y: auto;
+        border: 1px solid #e0e0e0;
+        border-radius: 6px;
+    }
+    .table-wrapper thead { position: sticky; top: 0; z-index: 1; }
+</style>
+</head>
+<body>
+<div class="container">
+
+    <!-- ===== 头部 ===== -->
+    <div class="header">
+        <h1>🧬 sgRNA 文库测序分析报告</h1>
+        <div class="meta">
+            样品名称: <strong>{{ sample_name }}</strong> &nbsp;|&nbsp;
+            分析日期: <strong>{{ analysis_date }}</strong>
+        </div>
+        <div class="meta" style="margin-top: 8px;">
+            软件作者: <strong>{{ software.author }}</strong> &nbsp;|&nbsp;
+            {{ software.ai_disclaimer }}
+        </div>
+    </div>
+
+    <!-- ===== 1. 分析工具 ===== -->
+    <div class="section">
+        <h2>🛠️ 1. 分析工具与版本</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 18%;">工具</th>
+                    <th style="width: 20%;">版本</th>
+                    <th style="width: 28%;">功能</th>
+                    <th>官网 / 下载链接</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for name, version, url, desc in tools %}
+                <tr>
+                    <td style="text-align:left; font-weight:600;">{{ name }}</td>
+                    <td>{{ version }}</td>
+                    <td style="text-align:left;">{{ desc }}</td>
+                    <td><a href="{{ url }}" target="_blank" style="color:#3498db;">{{ url }}</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- ===== 2. 质控摘要 ===== -->
+    <div class="section">
+        <h2>📊 2. 测序数据质控摘要</h2>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="label">原始 Reads</div>
+                <div class="value">{{ "{:,}".format(fastp.before_reads) }}</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Clean Reads (过滤后)</div>
+                <div class="value">{{ "{:,}".format(fastp.after_reads) }}</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">Clean Bases</div>
+                <div class="value">{{ "{:,}".format(fastp.after_bases) }}</div>
+            </div>
+            <div class="stat-card {{ 'good' if fastp.after_q30 >= 85 else 'warn' }}">
+                <div class="label">Q30 ≥ (过滤后)</div>
+                <div class="value">{{ "%.2f"|format(fastp.after_q30) }}%</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">GC 含量 (过滤后)</div>
+                <div class="value">{{ "%.2f"|format(fastp.after_gc) }}%</div>
+            </div>
+        </div>
+        {% if flash_stats %}
+        <div class="stats-grid" style="margin-top: 0;">
+            <div class="stat-card">
+                <div class="label">Total Pairs (拼接前)</div>
+                <div class="value">{{ "{:,}".format(flash_stats.get('total_pairs', 0)) }}</div>
+            </div>
+            <div class="stat-card good">
+                <div class="label">Combined Pairs (拼接成功)</div>
+                <div class="value">{{ "{:,}".format(flash_stats.get('combined_pairs', 0)) }}</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">拼接成功率</div>
+                <div class="value">{{ "%.2f"|format(flash_stats.get('percent_combined', 0)) }}%</div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- ===== 3. 测序质量评估图 ===== -->
+    <div class="section">
+        <h2>🔬 3. 测序数据质量评估</h2>
+
+        <div class="fig-container">
+            <div class="fig-item full-width">
+                <img src="{{ images.insert_size }}" alt="Insert size 分布">
+                <p class="fig-caption">图1. 文库片段长度（Insert Size）分布图</p>
+                <div class="fig-interp">
+                    <strong>📖 解读：</strong> 横轴为片段长度（bp），纵轴为占比（%）。
+                    sgRNA 文库的 insert 长度固定（通常 20bp），加上两侧接头和测序引物后，
+                    预期片段长度应集中在一个较窄的范围内。峰值位置（peak）应接近预期值。
+                    如分布出现多个峰或范围过宽，说明文库可能存在非特异性扩增或降解。
+                </div>
+                {% set a = assessments.get('insert_size', {}) %}
+                {% if a.text %}
+                <div class="fig-assessment {{ a.level }}">
+                    {{ "🟢" if a.level == 'good' else '🟡' if a.level in ('ok','warn') else '🟠' if a.level == 'warn_strong' else '🔴' }} {{ a.text }}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="fig-container" style="margin-top: 10px;">
+            <div class="fig-item">
+                <img src="{{ images.quality }}" alt="碱基质量分布">
+                <p class="fig-caption">图2. 碱基质量分布图<br><span style="font-weight:normal; font-size:0.85em; color:#888;">（过滤后 Clean Data）</span></p>
+                <div class="fig-interp">
+                    <strong>📖 解读：</strong> 横轴为测序位置（bp），纵轴为质量值（Q-score）。
+                    重点关注前 20-30bp 的质量（sgRNA 靶序列长度）。
+                    若前端中位数质量 &gt; Q30（准确度 99.9%），说明测序数据可用于后续分析；
+                    若前端质量明显偏低，可能影响 sgRNA 序列的准确识别。
+                </div>
+                {% set a = assessments.get('quality', {}) %}
+                {% if a.text %}
+                <div class="fig-assessment {{ a.level }}">
+                    {{ "🟢" if a.level == 'good' else '🟡' if a.level in ('ok','warn') else '🟠' if a.level == 'warn_strong' else '🔴' }} {{ a.text }}
+                </div>
+                {% endif %}
+            </div>
+            <div class="fig-item">
+                <img src="{{ images.base_content }}" alt="碱基含量分布">
+                <p class="fig-caption">图3. 碱基含量分布图<br><span style="font-weight:normal; font-size:0.85em; color:#888;">（过滤后 Clean Data）</span></p>
+                <div class="fig-interp">
+                    <strong>📖 解读：</strong> 横轴为测序位置（bp），纵轴为各碱基占比。
+                    本文库测序的是 sgRNA 表达盒，包含<strong>固定区</strong>与<strong>可变区</strong>
+                    两类区域（详见
+                    <a href="#base-content-method" style="color:#3498db; font-weight:bold;">第 8 节：碱基组成判定说明</a>）。
+                    下方分别为固定区与可变区的自动评估。
+                </div>
+                {% set f = assessments.get('base_content_fixed', {}) %}
+                {% if f.text %}
+                <div class="fig-assessment {{ f.level }}">
+                    <span style="font-weight:bold;">🧩 固定区判定：</span>
+                    {{ "🟢" if f.level == 'good' else '🟡' if f.level in ('ok','warn') else '🔴' if f.level == 'bad' else '🟠' }} {{ f.text }}
+                </div>
+                {% endif %}
+                {% set v = assessments.get('base_content_var', {}) %}
+                {% if v.text %}
+                <div class="fig-assessment {{ v.level }}">
+                    <span style="font-weight:bold;">🎯 可变区判定：</span>
+                    {{ "🟢" if v.level == 'good' else '🟡' if v.level in ('ok','warn') else '🟠' if v.level == 'warn_strong' else '🔴' }} {{ v.text }}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== 4. 覆盖度与均一性 ===== -->
+    <div class="section">
+        <h2>📈 4. sgRNA 覆盖度与均一性</h2>
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="label">参考库 sgRNA 总数</div>
+                <div class="value">{{ "{:,}".format(stats.total_ref) }}</div>
+            </div>
+            <div class="stat-card good">
+                <div class="label">检测到 sgRNA 数</div>
+                <div class="value">{{ "{:,}".format(stats.covered) }}</div>
+            </div>
+            <div class="stat-card {{ 'good' if stats.coverage >= 95 else ('warn' if stats.coverage >= 80 else 'bad') }}">
+                <div class="label">覆盖度</div>
+                <div class="value">{{ "%.2f"|format(stats.coverage) }}%</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">未覆盖数</div>
+                <div class="value">{{ "{:,}".format(stats.uncovered) }}</div>
+            </div>
+            <div class="stat-card {{ 'good' if stats.uniformity < 10 else ('warn' if stats.uniformity < 20 else 'bad') }}">
+                <div class="label">均一性 (p90/p10)</div>
+                <div class="value">{{ "%.2f"|format(stats.uniformity) }}</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">p10</div>
+                <div class="value">{{ stats.p10 }}</div>
+            </div>
+            <div class="stat-card">
+                <div class="label">p90</div>
+                <div class="value">{{ stats.p90 }}</div>
+            </div>
+        </div>
+        <p class="note">* 均一性 = p90 / p10，值越小表示分布越均匀，通常 &lt;10 为合格。
+        p10 和 p90 分别表示累积读数达到 10% 和 90% 时对应的 sgRNA 排名（按 reads 数从小到大排序）。</p>
+    </div>
+
+    <!-- ===== 5. sgRNA 丰度表 ===== -->
+    <div class="section">
+        <h2>📋 5. 各 sgRNA 丰度统计（Top 100 + 全部可滚动）</h2>
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>排名</th>
+                        <th>sgRNA 名称</th>
+                        <th>Reads 数</th>
+                        <th>占比 (%)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for sgrna in sgrna_table %}
+                    <tr>
+                        <td>{{ sgrna.rank }}</td>
+                        <td style="text-align:left; font-family: monospace;">{{ sgrna.name }}</td>
+                        <td>{{ "{:,}".format(sgrna.reads) }}</td>
+                        <td>{{ "%.3f"|format(sgrna.pct) }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <p class="note">* 共 {{ sgrna_table|length }} 个 sgRNA 被检测到。总 reads 数: {{ "{:,}".format(stats.total_reads) }}</p>
+    </div>
+
+    <!-- ===== 6. 丰度分布图 ===== -->
+    <div class="section">
+        <h2>📉 6. sgRNA 丰度分布图</h2>
+        <div class="fig-container">
+            <div class="fig-item">
+                <img src="{{ images.histogram }}" alt="核密度图">
+                <p class="fig-caption">图4. sgRNA 核密度图</p>
+                <div class="fig-interp">
+                    <strong>📖 解读：</strong> 核密度图展示 sgRNA 测序读数的概率密度分布。
+                    理想的均一文库，其分布应接近正态分布（钟形），且峰值对应的 reads 数应适中。
+                    如果分布明显右偏（长尾向右），说明少数 sgRNA 占极高比例；
+                    若左偏，则多数 sgRNA 读数偏低。
+                </div>
+                {% set a = assessments.get('histogram', {}) %}
+                {% if a.text %}
+                <div class="fig-assessment {{ a.level }}">
+                    {{ "🟢" if a.level == 'good' else '🟡' if a.level in ('ok','warn') else '🟠' if a.level == 'warn_strong' else '🔴' }} {{ a.text }}
+                </div>
+                {% endif %}
+            </div>
+            <div class="fig-item">
+                <img src="{{ images.cumulative }}" alt="累积分布图">
+                <p class="fig-caption">图5. sgRNA 累积分布图（log10 横轴）</p>
+                <div class="fig-interp">
+                    <strong>📖 解读：</strong> 横轴为 sgRNA reads 数的对数值，纵轴为累积比例。
+                    曲线越陡峭（接近垂直），说明大部分 sgRNA 的 reads 数集中在较窄的范围内，均一性越好；
+                    曲线越平缓，则说明 reads 数分布分散。
+                </div>
+                {% set a = assessments.get('cumulative', {}) %}
+                {% if a.text %}
+                <div class="fig-assessment {{ a.level }}">
+                    {{ "🟢" if a.level == 'good' else '🟡' if a.level in ('ok','warn') else '🟠' if a.level == 'warn_strong' else '🔴' }} {{ a.text }}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- ===== 7. 分析结论 ===== -->
+    <div class="section">
+        <h2>✅ 7. 分析结论</h2>
+
+
+        <div class="conclusion">
+            <h3>覆盖度评估</h3>
+            <ul>
+                <li>参考库共 <strong>{{ "{:,}".format(stats.total_ref) }}</strong> 个 sgRNA</li>
+                <li>检测到 <strong>{{ "{:,}".format(stats.covered) }}</strong> 个 ({{ "%.2f"|format(stats.coverage) }}%)</li>
+                <li>{{ "未检测到 %d 个 (%.2f%%)"|format(stats.uncovered, 100 - stats.coverage) }}</li>
+                {% if stats.coverage >= 95 %}
+                <li><strong style="color:#27ae60;">✅ 覆盖度良好</strong>，文库质量符合要求</li>
+                {% elif stats.coverage >= 80 %}
+                <li><strong style="color:#e67e22;">⚠️ 覆盖度一般</strong>，部分 sgRNA 未检测到，建议检查文库制备过程或增加测序深度</li>
+                {% else %}
+                <li><strong style="color:#e74c3c;">❌ 覆盖度偏低</strong>，大量 sgRNA 缺失，建议排查文库构建问题并考虑重新测序</li>
+                {% endif %}
+            </ul>
+        </div>
+
+        <div class="conclusion" style="margin-top: 16px;">
+            <h3>均一性评估</h3>
+            <ul>
+                <li>均一性 (p90/p10) = <strong>{{ "%.2f"|format(stats.uniformity) }}</strong></li>
+                <li>p10 = <strong>{{ stats.p10 }}</strong>, p90 = <strong>{{ stats.p90 }}</strong></li>
+                {% if stats.uniformity < 10 %}
+                <li><strong style="color:#27ae60;">✅ 均一性良好</strong>，sgRNA 分布较均匀</li>
+                {% elif stats.uniformity < 20 %}
+                <li><strong style="color:#e67e22;">⚠️ 均一性一般</strong>，文库存在一定偏向性，建议关注高丰度 sgRNA</li>
+                {% else %}
+                <li><strong style="color:#e74c3c;">❌ 均一性差</strong>，文库分布极不均一，可能存在严重扩增偏好</li>
+                {% endif %}
+            </ul>
+        </div>
+    </div>
+
+    <!-- ===== 8. 碱基组成判定说明 ===== -->
+    <div class="section" id="base-content-method">
+        <h2>📐 8. 碱基组成判定说明</h2>
+        <p style="color:#7f8c8d; margin-bottom: 15px;">本节解释碱基含量分布图（图3）的自动评估标准。</p>
+
+        <h3 style="color:#2c3e50; margin: 12px 0 6px;">1. 区域划分</h3>
+        <p style="line-height:1.7; color:#555;">sgRNA 表达盒包含两类区域：<strong>固定区</strong>
+        （启动子、scaffold、接头等，各位置以单一碱基为主，占比接近 100%）和
+        <strong>可变区</strong>（约 20bp 的 sgRNA 序列，因文库含不同靶向序列而呈现碱基多样性）。
+        软件按每个测序位置的主碱基占比（占比最高的碱基比例）划分：主碱基占比 ≥ 90% 的位置归入
+        固定区，&lt; 90% 的位置归入可变区。</p>
+
+        <h3 style="color:#2c3e50; margin: 12px 0 6px;">2. 固定区判定（硬判定）</h3>
+        <table>
+            <tr><th style="width:22%;">固定区主碱基占比</th><th style="width:15%;">评估</th><th>说明</th></tr>
+            <tr><td>&gt; 95%</td><td>🟢 合格</td><td>固定区所有 reads 一致，符合预期（Illumina 测序错误率 1-2% 下主碱基占比应 &gt; 97%）</td></tr>
+            <tr><td>85% - 95%</td><td>🟡 提示</td><td>固定区一致性略有不足，可能有轻微测序误差</td></tr>
+            <tr><td>&lt; 85%</td><td>🔴 异常</td><td>固定区碱基不一致，可能存在文库构建错误或严重污染</td></tr>
+        </table>
+
+        <h3 style="color:#2c3e50; margin: 12px 0 6px;">3. 可变区判定（软判定 / 风险提示）</h3>
+        <p style="line-height:1.7; color:#555;">可变区主碱基占比与<strong>理论随机期望 E₀(N)</strong> 对比
+        —— E₀(N) 为"参考库含 N 种 sgRNA、无碱基偏好"假设下，由多项分布概率模拟计算的某位置
+        主碱基占比期望（N 越大期望越低，如 N=8 约 44%、N=10000 约 25%）。</p>
+        <table>
+            <tr><th style="width:26%;">可变区主碱基占比</th><th style="width:15%;">评估</th><th>说明</th></tr>
+            <tr><td>&lt; 20%</td><td>🟠 风险较高</td><td>碱基过于混乱，存在污染或测序严重错误的风险</td></tr>
+            <tr><td>&gt; max(80%, 2.2×E₀)</td><td>🟠 风险较高</td><td>显著高于随机期望，多样性可能显著不足（若文库无强碱基偏好）</td></tr>
+            <tr><td>&gt; max(70%, 1.6×E₀)</td><td>🟡 风险提示</td><td>高于随机期望，多样性可能不足，或为碱基偏好/序列同源性所致</td></tr>
+            <tr><td>其他</td><td>🟢 正常</td><td>多样性与随机期望相符（或受文库设计影响）</td></tr>
+        </table>
+        <p class="note" style="color:#888; font-size:0.85em;">* 可变区为<strong>风险提示</strong>，受文库碱基偏好（如 U6 启动子要求 G 开头、PAM NGG 使 G/C 富集）和 sgRNA 序列同源性影响，不构成绝对异常判定。</p>
+
+        <h3 style="color:#2c3e50; margin: 12px 0 6px;">4. 综合建议</h3>
+        <p style="line-height:1.7; color:#555;">固定区一致性是文库质量的核心指标；可变区判定仅提示风险。
+        建议结合<strong>覆盖度</strong>与<strong>均一性</strong>（见第 4 节）综合评估文库质量。</p>
+    </div>
+
+    <!-- ===== 9. 专业名词解释 ===== -->
+    <div class="section">
+        <h2>📚 9. 专业名词解释</h2>
+        <p style="color:#7f8c8d; margin-bottom: 15px;">本报告涉及的专业名词及中文解释如下：</p>
+
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 25%;">术语</th>
+                    <th style="text-align:left;">解释</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for term, definition in glossary %}
+                <tr>
+                    <td style="text-align:left; font-weight:600; color:#2c3e50;">{{ term }}</td>
+                    <td style="text-align:left; line-height:1.6;">{{ definition }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- ===== 10. 参考文献 ===== -->
+    <div class="section">
+        <h2>📖 10. 参考文献</h2>
+        <ol style="padding-left: 25px; line-height: 2.0; color:#444;">
+            {% for ref in references %}
+            <li>{{ ref }}</li>
+            {% endfor %}
+        </ol>
+    </div>
+
+    <div class="footer">
+        <p>本报告由 <strong>sgRNA Analyzer v2.0</strong> 自动生成</p>
+        <p>软件作者：<strong>{{ software.author }}</strong></p>
+        <p>{{ software.ai_disclaimer }}</p>
+        <p style="margin-top:8px; color:#b0b8c0; font-size:0.85em;">{{ software.disclaimer }}</p>
+        <p style="margin-top:4px; color:#b0b8c0; font-size:0.85em;">{{ software.license }}</p>
+        <p style="margin-top:8px;">分析时间: {{ analysis_date }}</p>
+    </div>
+
+</div>
+
+<!-- 水印 -->
+<div class="watermark">
+    作者：{{ software.author }}<br>
+    AI 辅助编写<br>
+    仅供科研使用
+</div>
+</body>
+</html>
