@@ -242,7 +242,7 @@ def _compute_assessments(fastp_stats, stats_results):
 # 分析工具信息（含官网链接）
 # ==============================================
 TOOLS = [
-    ("sgRNA Analyzer", "本分析软件", "https://github.com/", "管线编排、统计与报告生成"),
+    ("sgRNA Analyzer", "本分析软件", "https://github.com/xylllll/sgrna-analyzer/", "管线编排、统计与报告生成"),
     ("FLASH", "拼接工具", "https://ccb.jhu.edu/software/FLASH/", "双端 Reads 拼接"),
     ("BLAST+ (blastn)", "比对工具", "https://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/", "序列比对"),
     ("Python", "编程语言", "https://www.python.org/", "分析管线运行环境"),
