@@ -20,6 +20,14 @@ AppVersion={#MyAppVersion}
 AppPublisher={#MyAppPublisher}
 AppVerName={#MyAppName} {#MyAppVersion}
 
+; Windows 文件属性 / 控制面板显示的版本信息
+VersionInfoVersion={#MyAppVersion}.0
+VersionInfoProductName={#MyAppName}
+VersionInfoProductVersion={#MyAppVersion}
+VersionInfoCompany={#MyAppPublisher}
+VersionInfoDescription={#MyAppName} 安装程序
+VersionInfoOriginalFileName=sgRNA_Analyzer_setup.exe
+
 ; 默认安装目录: 用户可选（显示目录选择页）
 DefaultDirName={autopf}\sgRNA Analyzer
 DefaultGroupName={#MyAppName}
