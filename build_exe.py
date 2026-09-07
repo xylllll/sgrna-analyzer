@@ -86,6 +86,8 @@ PyInstaller.__main__.run([
     "--hidden-import=sgrna_analyzer.modules.stats",
     "--hidden-import=sgrna_analyzer.modules.plotter",
     "--hidden-import=sgrna_analyzer.modules.reporter",
+    "--hidden-import=sgrna_analyzer.modules.library_xlsx",
+    "--hidden-import=openpyxl",
     "--hidden-import=jinja2",
     "--hidden-import=matplotlib",
     "--hidden-import=numpy",

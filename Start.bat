@@ -1,9 +1,9 @@
 @echo off
 cd /d "%~dp0"
-title sgRNA Analyzer v2.0
+title sgRNA Analyzer v2.1
 
 echo ========================================
-echo   sgRNA Analyzer v2.0 (Windows Native)
+echo   sgRNA Analyzer v2.1 (Windows Native)
 echo ========================================
 echo.
 
@@ -22,12 +22,12 @@ if %errorlevel% neq 0 (
 )
 
 rem ---------- Check dependencies ----------
-python -c "import numpy, matplotlib, jinja2" >nul 2>&1
+python -c "import numpy, matplotlib, jinja2, openpyxl" >nul 2>&1
 if %errorlevel% neq 0 (
     echo [INFO] First run - installing dependencies...
     echo        (using Tsinghua mirror, may take a few minutes)
     echo.
-    python -m pip install -i https://pypi.tuna.tsinghua.edu.cn/simple matplotlib numpy jinja2
+    python -m pip install -i https://pypi.tuna.tsinghua.edu.cn/simple matplotlib numpy jinja2 openpyxl
     if %errorlevel% neq 0 (
         echo.
         echo [ERROR] Dependency install failed! Check network and retry.
@@ -40,7 +40,7 @@ if %errorlevel% neq 0 (
 )
 
 rem ---------- Launch GUI ----------
-echo Starting sgRNA Analyzer v2.0...
+echo Starting sgRNA Analyzer v2.1...
 echo (This window closes when the app exits)
 echo.
 

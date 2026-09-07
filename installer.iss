@@ -1,5 +1,5 @@
 ; ============================================================
-; sgRNA Analyzer v2.0 安装包脚本 (Inno Setup)
+; sgRNA Analyzer v2.1 安装包脚本 (Inno Setup)
 ;
 ; 编译方法:
 ;   1. 安装 Inno Setup (https://jrsoftware.org/isinfo.php)
@@ -8,7 +8,7 @@
 ; ============================================================
 
 #define MyAppName "sgRNA Analyzer"
-#define MyAppVersion "2.0.0"
+#define MyAppVersion "2.1.0"
 #define MyAppPublisher "许逸伦"
 #define MyAppExeName "sgRNA_Analyzer.exe"
 

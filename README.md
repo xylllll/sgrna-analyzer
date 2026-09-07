@@ -1,4 +1,4 @@
-# sgRNA Analyzer v2.0 - 完全 Windows 原生版
+# sgRNA Analyzer v2.1 - 完全 Windows 原生版
 
 从测序文件（R1/R2 FASTQ）一键生成完整的 sgRNA 文库分析 HTML 报告。
 
@@ -41,7 +41,7 @@ python build_exe.py
 
 ```
 ┌──────────────────────────────────────────┐
-│  🧬 sgRNA 文库测序分析工具 v2.0           │
+│  🧬 sgRNA 文库测序分析工具 v2.1           │
 │                                          │
 │  ┌─ 输入文件 ─────────────────────────┐  │
 │  │ Read 1 (R1): [______] [浏览]       │  │

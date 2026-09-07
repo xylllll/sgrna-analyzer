@@ -9,6 +9,8 @@ import base64
 from datetime import datetime
 from jinja2 import Environment, FileSystemLoader
 
+from sgrna_analyzer import __version__
+
 logger = logging.getLogger(__name__)
 
 
@@ -400,7 +402,7 @@ def generate_report(config, fastp_stats, flash_stats, stats_results, plot_paths)
         "matplotlib": tool_versions.get("matplotlib", "—"),
         "numpy": tool_versions.get("numpy", "—"),
         "jinja2": tool_versions.get("jinja2", "—"),
-        "sgrna": "v2.0.0",
+        "sgrna": "v" + __version__,
     }
     tools_with_versions = [
         (name, _version_map.get(name.lower().split(" ")[0].split("(")[0].split("+")[0], "—"),

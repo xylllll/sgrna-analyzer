@@ -41,7 +41,7 @@ def save_config(config: dict):
 class MainWindow:
     def __init__(self):
         self.root = tk.Tk()
-        self.root.title("sgRNA Analyzer v2.0 - 作者：许逸伦（AI 辅助编写）")
+        self.root.title("sgRNA Analyzer v2.1 - 作者：许逸伦（AI 辅助编写）")
         self.root.geometry("780x720")
         self.root.minsize(700, 600)
         self.root.configure(bg="#f5f6fa")
@@ -80,7 +80,7 @@ class MainWindow:
         header = tk.Frame(self.root, bg="#2c3e50", height=55)
         header.pack(fill="x")
         header.pack_propagate(False)
-        tk.Label(header, text="🧬 sgRNA Analysis Tool v2.0",
+        tk.Label(header, text="🧬 sgRNA Analysis Tool v2.1",
                  font=("Microsoft YaHei", 14, "bold"),
                  bg="#2c3e50", fg="white").pack(expand=True)
 
@@ -134,6 +134,28 @@ class MainWindow:
         self._file_row(file_frame, "Read 1 (R1):", "r1", 0)
         self._file_row(file_frame, "Read 2 (R2):", "r2", 1)
         self._file_row(file_frame, "Reference FASTA:", "ref", 2)
+
+        # ---- Excel 文库录入（生成模板 / 转换 FASTA）----
+        lib_frame = tk.LabelFrame(main, text="Excel Library (文库录入)",
+                                  font=("Microsoft YaHei", 10, "bold"),
+                                  bg="white", fg="#2c3e50", padx=12, pady=8)
+        lib_frame.pack(fill="x", pady=(0, 8))
+
+        lib_row = tk.Frame(lib_frame, bg="white")
+        lib_row.pack(fill="x", pady=2)
+        tk.Button(lib_row, text="① 生成 Excel 模板", font=("Microsoft YaHei", 10),
+                  bg="#3498db", fg="white", activebackground="#2980b9",
+                  relief="flat", padx=12, pady=4, cursor="hand2",
+                  command=self._library_make_template).pack(side="left")
+        tk.Button(lib_row, text="② 读取 Excel → 转换 FASTA", font=("Microsoft YaHei", 10),
+                  bg="#e67e22", fg="white", activebackground="#d35400",
+                  relief="flat", padx=12, pady=4, cursor="hand2",
+                  command=self._library_convert).pack(side="left", padx=(8, 0))
+        tk.Label(lib_frame,
+                 text="提示：每行填一条 sgRNA；优先用「自定义ID」，否则自动用「基因名_sg序号」。"
+                      "转换成功后 .fasta 会自动填入上方 Reference FASTA，可直接运行分析。",
+                 font=("Microsoft YaHei", 8), bg="white", fg="#95a5a6",
+                 anchor="w", justify="left", wraplength=700).pack(fill="x", pady=(4, 0))
 
         # ---- Parameters ----
         param_frame = tk.LabelFrame(main, text="Parameters",
@@ -418,6 +440,93 @@ class MainWindow:
             self.outdir_var.set(path)
 
     # ================================================================
+    # Excel 文库录入（生成模板 / 转换 FASTA）
+    # ================================================================
+
+    def _library_make_template(self):
+        """① 一键生成 sgRNA 文库录入 Excel 模板"""
+        from sgrna_analyzer.modules import library_xlsx  # 懒加载：openpyxl 为可选依赖
+        path = filedialog.asksaveasfilename(
+            title="保存 Excel 模板",
+            defaultextension=".xlsx",
+            filetypes=[("Excel 工作簿", "*.xlsx")],
+            initialfile="sgRNA文库录入模板.xlsx",
+            initialdir=os.path.expanduser("~"),
+        )
+        if not path:
+            return
+        try:
+            self.root.config(cursor="watch")
+            self.root.update_idletasks()
+            library_xlsx.write_template(path)
+        except Exception as e:
+            self._log(f"❌ 生成模板失败: {e}", "error")
+            messagebox.showerror("生成模板失败", str(e))
+            return
+        finally:
+            self.root.config(cursor="")
+        self._log(f"✅ Excel 模板已生成：{path}", "success")
+        if messagebox.askyesno("模板已生成", f"模板已保存到：\n{path}\n\n是否立即打开？"):
+            try:
+                os.startfile(path)
+            except Exception:
+                pass
+
+    def _library_convert(self):
+        """② 读取已填写的 xlsx → 校验并转换为参考库 FASTA，自动填入 Reference FASTA"""
+        from sgrna_analyzer.modules import library_xlsx
+        xlsx = filedialog.askopenfilename(
+            title="选择已填写的 sgRNA 文库 Excel",
+            filetypes=[("Excel 工作簿", "*.xlsx"), ("所有文件", "*.*")],
+            initialdir=os.path.expanduser("~"),
+        )
+        if not xlsx:
+            return
+        out = os.path.splitext(xlsx)[0] + ".fasta"
+        if os.path.exists(out):
+            if not messagebox.askyesno("文件已存在",
+                                       f"{out} 已存在。\n点“是”覆盖；点“否”自动另存为新文件。"):
+                i = 1
+                while os.path.exists(out):
+                    out = f"{os.path.splitext(xlsx)[0]}_({i}).fasta"
+                    i += 1
+        try:
+            self.root.config(cursor="watch")
+            self.root.update_idletasks()
+            res = library_xlsx.convert_xlsx_to_fasta(xlsx, out)
+        except Exception as e:
+            self._log(f"❌ Excel 转换失败: {e}", "error")
+            messagebox.showerror("Excel 转换失败", str(e))
+            return
+        finally:
+            self.root.config(cursor="")
+
+        if not res["ok"]:
+            errs = res["errors"]
+            lines = [f"第 {r} 行：{m}" if isinstance(r, int) else m for r, m in errs[:15]]
+            if len(errs) > 15:
+                lines.append(f"…… 共 {len(errs)} 处错误，请修正后重新转换。")
+            self._log(f"❌ 校验未通过（{len(errs)} 处错误），未生成 FASTA。", "error")
+            messagebox.showerror("校验未通过", "未生成 FASTA，请修正：\n\n" + "\n".join(lines))
+            return
+
+        # 成功：持久化并自动回填 Reference FASTA（var.set 会触发 trace 重置分析状态）
+        self.config["ref"] = res["fasta_path"]
+        save_config(self.config)
+        self.ref_var.set(res["fasta_path"])
+
+        msg = (f"转换成功！\n\n已生成：{res['fasta_path']}\n"
+               f"共 {res['entries']} 条序列（自动ID {res['auto_ids']} 条，自定义ID {res['custom_ids']} 条）\n\n"
+               f"已自动填入 “Reference FASTA”，可直接开始分析。")
+        if res["warnings"]:
+            w = [f"第 {r} 行：{m}" if isinstance(r, int) else m for r, m in res["warnings"][:10]]
+            if len(res["warnings"]) > 10:
+                w.append(f"…… 共 {len(res['warnings'])} 条提示。")
+            msg += "\n\n提示：\n" + "\n".join(w)
+        self._log(f"✅ 已转换 {res['entries']} 条序列 → {res['fasta_path']}", "success")
+        messagebox.showinfo("转换成功", msg)
+
+    # ================================================================
     # Analysis
     # ================================================================
 
@@ -598,7 +707,7 @@ class MainWindow:
 
         content = """尊敬的软件使用者：
 
-欢迎使用 sgRNA Analyzer v2.0。在使用本软件前，请仔细阅读以下声明：
+欢迎使用 sgRNA Analyzer v2.1。在使用本软件前，请仔细阅读以下声明：
 
 【作者信息】
 软件作者：许逸伦
@@ -648,7 +757,7 @@ class MainWindow:
     def _show_about(self):
         """显示关于对话框（含作者、声明和免责条款）"""
         about_text = (
-            "🧬 sgRNA Analyzer v2.0\n"
+            "🧬 sgRNA Analyzer v2.1\n"
             "──────────────────────\n"
             "软件作者：许逸伦\n\n"
             "声明：\n"

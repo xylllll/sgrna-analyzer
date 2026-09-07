@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="sgrna-analyzer",
-    version="2.0.0",
+    version="2.1.0",
     author="许逸伦",
     description="自动化sgRNA文库测序结果分析工具（Windows 原生版）",
     long_description=long_description,
@@ -19,6 +19,7 @@ setup(
         "matplotlib>=3.7.0",
         "numpy>=1.24.0",
         "jinja2>=3.1.0",
+        "openpyxl>=3.1.0",
     ],
     entry_points={
         "console_scripts": [
